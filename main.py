@@ -1,5 +1,6 @@
 from flask import Flask
 from threading import Thread
+import os
 
 app = Flask('')
 
@@ -13,11 +14,11 @@ def run():
 def keep_alive():
     t = Thread(target=run)
     t.start()
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 import json
-import os
 from discord.utils import get
 from datetime import datetime
 
@@ -28,6 +29,21 @@ client = commands.Bot(command_prefix="!", intents=intents)
 DATA_FILE = "tierlist.json"
 LOGS_FILE = "logs_channels.json"
 COOLDOWN_FILE = "cooldowns.json"
+
+# YENİ KİTLER
+KITS = ["Nethpot", "Beast", "Diapot", "Crystal", "Gapple", "Smp", "Axe", "Uhc"]
+
+# Custom Emoji ID'leri
+KIT_EMOJIS = {
+    "Nethpot": "<:nethpot:1429545880805179544>",
+    "Beast": "<:beast:1429546570117939250>",
+    "Diapot": "<:diapot:1431384633345572966>",
+    "Crystal": "<:crystal:1429548979930009674>",
+    "Gapple": "<:gapple:1429545229547212830>",
+    "Smp": "<:smp:1429561775388364921>",
+    "Axe": "<:axe:1429549142190981174>",
+    "Uhc": "<:uhc:1429553332770574347>"
+}
 
 def load_data():
     if not os.path.exists(DATA_FILE):
@@ -60,7 +76,6 @@ def save_cooldowns(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 def check_cooldown(user_id: int, kit_name: str) -> bool:
-    """Kullanıcının belirli kit için cooldown'ı var mı kontrol eder"""
     cooldowns = load_cooldowns()
     user_id_str = str(user_id)
     
@@ -72,12 +87,11 @@ def check_cooldown(user_id: int, kit_name: str) -> bool:
     
     last_use = cooldowns[user_id_str][kit_name]
     current_time = datetime.now().timestamp()
-    cooldown_time = 5 * 24 * 60 * 60  # 5 gün saniye cinsinden
+    cooldown_time = 5 * 24 * 60 * 60
     
     return (current_time - last_use) < cooldown_time
 
 def add_cooldown(user_id: int, kit_name: str):
-    """Kullanıcıya belirli kit için cooldown ekler"""
     cooldowns = load_cooldowns()
     user_id_str = str(user_id)
     
@@ -88,7 +102,6 @@ def add_cooldown(user_id: int, kit_name: str):
     save_cooldowns(cooldowns)
 
 def get_remaining_cooldown(user_id: int, kit_name: str) -> int:
-    """Kalan cooldown süresini saniye olarak döndürür"""
     cooldowns = load_cooldowns()
     user_id_str = str(user_id)
     
@@ -97,13 +110,12 @@ def get_remaining_cooldown(user_id: int, kit_name: str) -> int:
     
     last_use = cooldowns[user_id_str][kit_name]
     current_time = datetime.now().timestamp()
-    cooldown_time = 5 * 24 * 60 * 60  # 5 gün
+    cooldown_time = 5 * 24 * 60 * 60
     
     remaining = cooldown_time - (current_time - last_use)
     return max(0, int(remaining))
 
 def get_tier_roles_for_kit(kit_name: str):
-    """Belirli kit için tier rol seçeneklerini döndürür"""
     tiers = ["HT1", "LT1", "HT2", "LT2", "HT3", "LT3", "HT4", "LT4", "HT5", "LT5"]
     roles = []
     
@@ -113,20 +125,7 @@ def get_tier_roles_for_kit(kit_name: str):
     
     return roles
 
-def get_all_tier_roles():
-    """Tüm tier rol seçeneklerini döndürür (genel kullanım için)"""
-    roles = []
-    kits = ["Nethpot", "Beast", "Diapot", "Gapple", "Elytra"]
-    tiers = ["HT1", "LT1", "HT2", "LT2", "HT3", "LT3", "HT4", "LT4", "HT5", "LT5"]
-    
-    for kit in kits:
-        for tier in tiers:
-            roles.append(app_commands.Choice(name=f"{tier} {kit}", value=f"{tier} {kit}"))
-    
-    return roles
-
 async def send_log(guild_id: int, embed: discord.Embed):
-    """Log mesajını belirtilen sunucunun log kanalına gönderir"""
     logs_data = load_logs_channels()
     guild_id_str = str(guild_id)
     
@@ -140,7 +139,7 @@ async def send_log(guild_id: int, embed: discord.Embed):
         try:
             await channel.send(embed=embed)
         except:
-            pass  # Kanal bulunamazsa veya mesaj gönderilemezse sessizce geç
+            pass
 
 @client.event
 async def on_ready():
@@ -148,7 +147,7 @@ async def on_ready():
     await client.tree.sync()
     print(f"✅ Bot giriş yaptı: {client.user}")
 
-# ——————— Cooldown Sıfırlama Komutu ———————
+# ——————— Cooldown Sıfırlama ———————
 
 @client.tree.command(name="cd-sıfırla", description="Belirtilen üyenin cooldown'ını sıfırlar.")
 @app_commands.describe(üye="Cooldown'ı sıfırlanacak üye")
@@ -175,7 +174,6 @@ async def cd_sifirla(interaction: discord.Interaction, üye: discord.Member):
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
     
-    # Log gönder
     log_embed = discord.Embed(
         title="🔄 Cooldown Sıfırlandı",
         description="Bir kullanıcının cooldown'ı sıfırlandı.",
@@ -187,7 +185,7 @@ async def cd_sifirla(interaction: discord.Interaction, üye: discord.Member):
     
     await send_log(interaction.guild_id, log_embed)
 
-# ——————— Tier komutları ———————
+# ——————— Logs ———————
 
 @client.tree.command(name="logs", description="Logs kanalını ayarlar.")
 @app_commands.describe(kanal="Log mesajlarının gönderileceği kanal")
@@ -212,7 +210,6 @@ async def logs(interaction: discord.Interaction, kanal: discord.TextChannel):
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
     
-    # İlk log mesajını gönder
     log_embed = discord.Embed(
         title="🔧 Sistem Ayarları",
         description="Logs kanalı başarıyla ayarlandı!",
@@ -233,29 +230,15 @@ async def kur(interaction: discord.Interaction):
             "❌ Bu komutu sadece **Kurucu** rolüne sahip kullanıcılar kullanabilir.", ephemeral=True
         )
     
-    roles_to_create = [
-        # Nethpot Tiers
-        "HT1 Nethpot", "LT1 Nethpot", "HT2 Nethpot", "LT2 Nethpot", "HT3 Nethpot", 
-        "LT3 Nethpot", "HT4 Nethpot", "LT4 Nethpot", "HT5 Nethpot", "LT5 Nethpot",
-        # Beast Tiers  
-        "HT1 Beast", "LT1 Beast", "HT2 Beast", "LT2 Beast", "HT3 Beast", 
-        "LT3 Beast", "HT4 Beast", "LT4 Beast", "HT5 Beast", "LT5 Beast",
-        # Diapot Tiers
-        "HT1 Diapot", "LT1 Diapot", "HT2 Diapot", "LT2 Diapot", "HT3 Diapot", 
-        "LT3 Diapot", "HT4 Diapot", "LT4 Diapot", "HT5 Diapot", "LT5 Diapot",
-        # Gapple Tiers
-        "HT1 Gapple", "LT1 Gapple", "HT2 Gapple", "LT2 Gapple", "HT3 Gapple", 
-        "LT3 Gapple", "HT4 Gapple", "LT4 Gapple", "HT5 Gapple", "LT5 Gapple",
-        # Elytra Tiers
-        "HT1 Elytra", "LT1 Elytra", "HT2 Elytra", "LT2 Elytra", "HT3 Elytra", 
-        "LT3 Elytra", "HT4 Elytra", "LT4 Elytra", "HT5 Elytra", "LT5 Elytra",
-        # Tester Roles
-        "Nethpot Tester",
-        "Diapot Tester",  
-        "Beast Tester",
-        "Elytra Tester",
-        "Gapple Tester",
-    ]
+    roles_to_create = []
+    tiers = ["HT1", "LT1", "HT2", "LT2", "HT3", "LT3", "HT4", "LT4", "HT5", "LT5"]
+    
+    # Tüm kitler için tier rolleri
+    for kit in KITS:
+        for tier in tiers:
+            roles_to_create.append(f"{tier} {kit}")
+        # Tester rolleri
+        roles_to_create.append(f"{kit} Tester")
     
     created_roles = []
     existing_roles = []
@@ -303,7 +286,6 @@ async def kur(interaction: discord.Interaction):
     
     await interaction.followup.send(embed=embed, ephemeral=True)
     
-    # Log gönder
     log_embed = discord.Embed(
         title="🎭 Roller Kuruldu",
         description="Tier rolleri kurulum işlemi yapıldı.",
@@ -316,7 +298,7 @@ async def kur(interaction: discord.Interaction):
     
     await send_log(interaction.guild_id, log_embed)
 
-# ——————— Tier Remove Komutu ———————
+# ——————— Tier Remove ———————
 
 @client.tree.command(name="tier_remove", description="Kullanıcıyı tier'dan çıkar ve rolünü al.")
 @app_commands.describe(kullanıcı="Silinecek kullanıcı", rol="Silinecek rol")
@@ -326,13 +308,17 @@ async def tier_remove(interaction: discord.Interaction, kullanıcı: discord.Mem
             "❌ Bu komutu sadece **Tester** rolüne sahip kullanıcılar kullanabilir.", ephemeral=True
         )
 
-    data = load_data(); gid = str(interaction.guild_id); rid = str(rol.id)
+    data = load_data()
+    gid = str(interaction.guild_id)
+    rid = str(rol.id)
+    
     if gid not in data or rid not in data[gid] or str(kullanıcı.id) not in data[gid][rid]:
         return await interaction.response.send_message(
             f"{kullanıcı.mention} `{rol.name}` tier'ında bulunamadı.", ephemeral=True
         )
 
-    data[gid][rid].remove(str(kullanıcı.id)); save_data(data)
+    data[gid][rid].remove(str(kullanıcı.id))
+    save_data(data)
     
     mesaj_ek = ""
     if rol in kullanıcı.roles:
@@ -343,7 +329,6 @@ async def tier_remove(interaction: discord.Interaction, kullanıcı: discord.Mem
     
     await interaction.response.send_message(f"{kullanıcı.mention} `{rol.name}` tier'ından çıkarıldı. {mesaj_ek}")
     
-    # Log gönder
     log_embed = discord.Embed(
         title="🗑️ Tier Silme",
         description="Bir kullanıcı tier listesinden çıkarıldı.",
@@ -359,14 +344,17 @@ async def tier_remove(interaction: discord.Interaction, kullanıcı: discord.Mem
 
 @client.tree.command(name="tier_show", description="Tüm tier listesini gösterir.")
 async def tier_show(interaction: discord.Interaction):
-    data = load_data(); gid = str(interaction.guild_id)
+    data = load_data()
+    gid = str(interaction.guild_id)
+    
     if gid not in data or not data[gid]:
         return await interaction.response.send_message("Sunucuda kayıtlı tier verisi yok.", ephemeral=True)
 
     embed = discord.Embed(title="📊 Tier Listesi", color=discord.Color.blurple())
     for rid, uids in data[gid].items():
         role = interaction.guild.get_role(int(rid))
-        if not role: continue
+        if not role:
+            continue
         mentions = [
             interaction.guild.get_member(int(u)).mention
             for u in uids
@@ -376,7 +364,6 @@ async def tier_show(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed)
     
-    # Log gönder
     log_embed = discord.Embed(
         title="📋 Tier Listesi Görüntülendi",
         description="Tier listesi görüntülendi.",
@@ -388,154 +375,8 @@ async def tier_show(interaction: discord.Interaction):
     
     await send_log(interaction.guild_id, log_embed)
 
-# ——————— TierVer Komutları - Kit Bazlı ———————
+# ——————— TierVer Fonksiyonu ———————
 
-# Nethpot için TierVer komutu
-@client.tree.command(name="tierver-nethpot", description="Nethpot kit için tier verir.")
-@app_commands.describe(
-    user="Oyuncu (etiketle)",
-    tester="Tester (etiketle)",
-    oyun_içi_isim="Oyun içi isim",
-    yeni_tier="Yeni Nethpot Tier seç",
-    eski_tier="Eski Nethpot Tier seç",
-    skor="Maç skoru (örn. 2-1)",
-    sunucu="Sunucu adı",
-    kazanan="Kazanan (etiketle)"
-)
-@app_commands.choices(
-    yeni_tier=get_tier_roles_for_kit("Nethpot"),
-    eski_tier=get_tier_roles_for_kit("Nethpot")
-)
-async def tierver_nethpot(
-    interaction: discord.Interaction,
-    user: discord.Member,
-    tester: discord.Member,
-    oyun_içi_isim: str,
-    yeni_tier: str,
-    eski_tier: str,
-    skor: str,
-    sunucu: str,
-    kazanan: discord.Member
-):
-    await handle_tierver(interaction, "Nethpot", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
-
-# Diapot için TierVer komutu
-@client.tree.command(name="tierver-diapot", description="Diapot kit için tier verir.")
-@app_commands.describe(
-    user="Oyuncu (etiketle)",
-    tester="Tester (etiketle)",
-    oyun_içi_isim="Oyun içi isim",
-    yeni_tier="Yeni Diapot Tier seç",
-    eski_tier="Eski Diapot Tier seç",
-    skor="Maç skoru (örn. 2-1)",
-    sunucu="Sunucu adı",
-    kazanan="Kazanan (etiketle)"
-)
-@app_commands.choices(
-    yeni_tier=get_tier_roles_for_kit("Diapot"),
-    eski_tier=get_tier_roles_for_kit("Diapot")
-)
-async def tierver_diapot(
-    interaction: discord.Interaction,
-    user: discord.Member,
-    tester: discord.Member,
-    oyun_içi_isim: str,
-    yeni_tier: str,
-    eski_tier: str,
-    skor: str,
-    sunucu: str,
-    kazanan: discord.Member
-):
-    await handle_tierver(interaction, "Diapot", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
-
-# Beast için TierVer komutu
-@client.tree.command(name="tierver-beast", description="Beast kit için tier verir.")
-@app_commands.describe(
-    user="Oyuncu (etiketle)",
-    tester="Tester (etiketle)",
-    oyun_içi_isim="Oyun içi isim",
-    yeni_tier="Yeni Beast Tier seç",
-    eski_tier="Eski Beast Tier seç",
-    skor="Maç skoru (örn. 2-1)",
-    sunucu="Sunucu adı",
-    kazanan="Kazanan (etiketle)"
-)
-@app_commands.choices(
-    yeni_tier=get_tier_roles_for_kit("Beast"),
-    eski_tier=get_tier_roles_for_kit("Beast")
-)
-async def tierver_beast(
-    interaction: discord.Interaction,
-    user: discord.Member,
-    tester: discord.Member,
-    oyun_içi_isim: str,
-    yeni_tier: str,
-    eski_tier: str,
-    skor: str,
-    sunucu: str,
-    kazanan: discord.Member
-):
-    await handle_tierver(interaction, "Beast", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
-
-# Gapple için TierVer komutu
-@client.tree.command(name="tierver-gapple", description="Gapple kit için tier verir.")
-@app_commands.describe(
-    user="Oyuncu (etiketle)",
-    tester="Tester (etiketle)",
-    oyun_içi_isim="Oyun içi isim",
-    yeni_tier="Yeni Gapple Tier seç",
-    eski_tier="Eski Gapple Tier seç",
-    skor="Maç skoru (örn. 2-1)",
-    sunucu="Sunucu adı",
-    kazanan="Kazanan (etiketle)"
-)
-@app_commands.choices(
-    yeni_tier=get_tier_roles_for_kit("Gapple"),
-    eski_tier=get_tier_roles_for_kit("Gapple")
-)
-async def tierver_gapple(
-    interaction: discord.Interaction,
-    user: discord.Member,
-    tester: discord.Member,
-    oyun_içi_isim: str,
-    yeni_tier: str,
-    eski_tier: str,
-    skor: str,
-    sunucu: str,
-    kazanan: discord.Member
-):
-    await handle_tierver(interaction, "Gapple", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
-
-# Elytra için TierVer komutu
-@client.tree.command(name="tierver-elytra", description="Elytra kit için tier verir.")
-@app_commands.describe(
-    user="Oyuncu (etiketle)",
-    tester="Tester (etiketle)",
-    oyun_içi_isim="Oyun içi isim",
-    yeni_tier="Yeni Elytra Tier seç",
-    eski_tier="Eski Elytra Tier seç",
-    skor="Maç skoru (örn. 2-1)",
-    sunucu="Sunucu adı",
-    kazanan="Kazanan (etiketle)"
-)
-@app_commands.choices(
-    yeni_tier=get_tier_roles_for_kit("Elytra"),
-    eski_tier=get_tier_roles_for_kit("Elytra")
-)
-async def tierver_elytra(
-    interaction: discord.Interaction,
-    user: discord.Member,
-    tester: discord.Member,
-    oyun_içi_isim: str,
-    yeni_tier: str,
-    eski_tier: str,
-    skor: str,
-    sunucu: str,
-    kazanan: discord.Member
-):
-    await handle_tierver(interaction, "Elytra", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
-
-# Ortak TierVer İşleyici Fonksiyon
 async def handle_tierver(
     interaction: discord.Interaction,
     kit: str,
@@ -548,34 +389,38 @@ async def handle_tierver(
     sunucu: str,
     kazanan: discord.Member
 ):
-    # Kit-specific tester role kontrolü - sadece kit-özel rol yeterli
     required_role = f"{kit} Tester"
     if not any(r.name == required_role for r in interaction.user.roles):
-        return await interaction.response.send_message(f"❌ Bu komutu kullanabilmek için `{required_role}` rolüne sahip olmanız gerekir.", ephemeral=True)
+        return await interaction.response.send_message(
+            f"❌ Bu komutu kullanabilmek için `{required_role}` rolüne sahip olmanız gerekir.", ephemeral=True
+        )
 
-    # Rol objelerini bul
     yeni_tier_role = discord.utils.get(interaction.guild.roles, name=yeni_tier)
     eski_tier_role = discord.utils.get(interaction.guild.roles, name=eski_tier)
     
     if not yeni_tier_role:
         return await interaction.response.send_message(f"❌ `{yeni_tier}` rolü bulunamadı!", ephemeral=True)
 
-    # Veritabanına ekle
-    data = load_data(); gid = str(interaction.guild_id); tid = str(yeni_tier_role.id)
+    data = load_data()
+    gid = str(interaction.guild_id)
+    tid = str(yeni_tier_role.id)
     data.setdefault(gid, {}).setdefault(tid, [])
+    
     if str(user.id) not in data[gid][tid]:
-        data[gid][tid].append(str(user.id)); save_data(data)
+        data[gid][tid].append(str(user.id))
+        save_data(data)
 
-    # Rolleri güncelle
     if eski_tier_role and eski_tier_role in user.roles:
         await user.remove_roles(eski_tier_role)
     if yeni_tier_role not in user.roles:
         await user.add_roles(yeni_tier_role)
 
-    # Rapor gönder
-    channel = discord.utils.get(interaction.guild.channels, name=f"🏆┃{kit.lower()}-sonuçlar")
+    # Kanal ismi: 🏆・kit-sonuclar (örn: 🏆・nethpot-sonuclar)
+    channel_name = f"🏆・{kit.lower()}-sonuclar"
+    channel = discord.utils.get(interaction.guild.channels, name=channel_name)
+    
     if not channel:
-        return await interaction.response.send_message(f"❌ `🏆┃{kit.lower()}-sonuçlar` kanalı bulunamadı!", ephemeral=True)
+        return await interaction.response.send_message(f"❌ `{channel_name}` kanalı bulunamadı!", ephemeral=True)
 
     embed = discord.Embed(title=f"🏆 {oyun_içi_isim} {kit} Test Sonuçları:", color=discord.Color.orange())
     embed.add_field(name="Discord:", value=user.mention, inline=True)
@@ -589,7 +434,6 @@ async def handle_tierver(
     await channel.send(embed=embed)
     await interaction.response.send_message("✅ Kaydedildi, rol verildi ve rapor gönderildi.", ephemeral=True)
     
-    # Log
     log_embed = discord.Embed(title="🏆 Tier Verme", color=discord.Color.green(), timestamp=datetime.now())
     log_embed.add_field(name="Yapan", value=interaction.user.mention, inline=True)
     log_embed.add_field(name="Oyuncu", value=user.mention, inline=True)
@@ -598,7 +442,57 @@ async def handle_tierver(
     log_embed.add_field(name="Skor", value=skor, inline=True)
     await send_log(interaction.guild_id, log_embed)
 
-# ——————— Ticket Form Modal ———————
+# ——————— TierVer Komutları (Her Kit İçin) ———————
+
+@client.tree.command(name="tierver-nethpot", description="Nethpot kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Nethpot"), eski_tier=get_tier_roles_for_kit("Nethpot"))
+async def tierver_nethpot(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Nethpot", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-beast", description="Beast kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Beast"), eski_tier=get_tier_roles_for_kit("Beast"))
+async def tierver_beast(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Beast", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-diapot", description="Diapot kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Diapot"), eski_tier=get_tier_roles_for_kit("Diapot"))
+async def tierver_diapot(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Diapot", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-crystal", description="Crystal kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Crystal"), eski_tier=get_tier_roles_for_kit("Crystal"))
+async def tierver_crystal(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Crystal", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-gapple", description="Gapple kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Gapple"), eski_tier=get_tier_roles_for_kit("Gapple"))
+async def tierver_gapple(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Gapple", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-smp", description="Smp kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Smp"), eski_tier=get_tier_roles_for_kit("Smp"))
+async def tierver_smp(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Smp", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-axe", description="Axe kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Axe"), eski_tier=get_tier_roles_for_kit("Axe"))
+async def tierver_axe(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Axe", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+@client.tree.command(name="tierver-uhc", description="Uhc kit için tier verir.")
+@app_commands.describe(user="Oyuncu", tester="Tester", oyun_içi_isim="Oyun içi isim", yeni_tier="Yeni Tier", eski_tier="Eski Tier", skor="Skor", sunucu="Sunucu", kazanan="Kazanan")
+@app_commands.choices(yeni_tier=get_tier_roles_for_kit("Uhc"), eski_tier=get_tier_roles_for_kit("Uhc"))
+async def tierver_uhc(interaction: discord.Interaction, user: discord.Member, tester: discord.Member, oyun_içi_isim: str, yeni_tier: str, eski_tier: str, skor: str, sunucu: str, kazanan: discord.Member):
+    await handle_tierver(interaction, "Uhc", user, tester, oyun_içi_isim, yeni_tier, eski_tier, skor, sunucu, kazanan)
+
+# ——————— Ticket Modal ———————
 
 class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
     def __init__(self, kit_name: str):
@@ -627,23 +521,19 @@ class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
     )
     
     async def on_submit(self, interaction: discord.Interaction):
-        # Kategoriyi bul
         category = next((c for c in interaction.guild.categories if c.name.lower() == self.kit_name.lower()), None)
         if not category:
             return await interaction.response.send_message(f"❌ `{self.kit_name}` kategorisi bulunamadı!", ephemeral=True)
 
-        # Kanal adını oluştur
         name = f"ticket-{interaction.user.name.lower()}-{self.kit_name.lower()}"
         if get(interaction.guild.channels, name=name):
             return await interaction.response.send_message("❌ Zaten açık bir ticketın var!", ephemeral=True)
 
-        # Sadece bu kit için tester rolünü bul
         kit_tester_role = get(interaction.guild.roles, name=f"{self.kit_name} Tester")
         
         if not kit_tester_role:
             return await interaction.response.send_message(f"❌ `{self.kit_name} Tester` rolü bulunamadı!", ephemeral=True)
 
-        # Kanal izinlerini ayarla - SADECE kit-özel tester rolü görebilir
         overwrites = {
             interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True),
@@ -651,12 +541,10 @@ class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
             kit_tester_role: discord.PermissionOverwrite(view_channel=True, send_messages=True)
         }
         
-        # Genel "Tester" rolünü açıkça engelle
         general_tester_role = get(interaction.guild.roles, name="Tester")
         if general_tester_role:
             overwrites[general_tester_role] = discord.PermissionOverwrite(view_channel=False)
 
-        # Ticket kanalını oluştur
         try:
             ticket_chan = await interaction.guild.create_text_channel(
                 name=name,
@@ -667,7 +555,6 @@ class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
         except Exception as e:
             return await interaction.response.send_message(f"❌ Ticket kanalı oluşturulamadı: {str(e)}", ephemeral=True)
 
-        # Form bilgilerini embed olarak gönder
         form_embed = discord.Embed(
             title=f"🎫 {self.kit_name} Ticket Formu",
             color=discord.Color.dark_gold(),
@@ -679,7 +566,6 @@ class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
         form_embed.add_field(name="📝 Açan Kişi", value=interaction.user.mention, inline=False)
         form_embed.set_footer(text="Test için bekleyin, bir tester sizinle iletişime geçecektir.")
 
-        # Sadece kit-özel tester rolünü etiketle
         content = f"{kit_tester_role.mention} Yeni {self.kit_name} ticket açıldı!"
         
         try:
@@ -688,12 +574,10 @@ class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
             await ticket_chan.delete()
             return await interaction.response.send_message(f"❌ Ticket mesajı gönderilemedi: {str(e)}", ephemeral=True)
 
-        # Cooldown ekle
         add_cooldown(interaction.user.id, self.kit_name)
         
         await interaction.response.send_message(f"✅ Ticket oluşturuldu: {ticket_chan.mention}", ephemeral=True)
         
-        # Log gönder
         log_embed = discord.Embed(
             title="🎫 Ticket Oluşturuldu",
             description="Yeni bir ticket açıldı.",
@@ -703,13 +587,10 @@ class TicketFormModal(discord.ui.Modal, title="Ticket Formu"):
         log_embed.add_field(name="Ticket Açan", value=interaction.user.mention, inline=True)
         log_embed.add_field(name="Kit", value=self.kit_name, inline=True)
         log_embed.add_field(name="Kanal", value=ticket_chan.mention, inline=True)
-        log_embed.add_field(name="Kullanıcı Adı", value=self.kullanici_adi.value, inline=True)
-        log_embed.add_field(name="Sunucu", value=self.sunucu.value, inline=True)
-        log_embed.add_field(name="Eski Tier", value=self.eski_tier.value if self.eski_tier.value else "Belirtilmedi", inline=True)
         
         await send_log(interaction.guild_id, log_embed)
 
-# ——————— Ticket Panel ve Close ———————
+# ——————— Ticket Panel ———————
 
 class TicketSelectMenu(discord.ui.Select):
     def __init__(self):
@@ -717,32 +598,50 @@ class TicketSelectMenu(discord.ui.Select):
             discord.SelectOption(
                 label="Nethpot",
                 description="Ticket açmak için Nethpot kitini seçin",
-                emoji="🧪",
+                emoji="<:nethpot:1429545880805179544>",
                 value="Nethpot"
-            ),
-            discord.SelectOption(
-                label="Diapot",
-                description="Ticket açmak için Diapot kitini seçin",
-                emoji="💎",
-                value="Diapot"
-            ),
-            discord.SelectOption(
-                label="Elytra",
-                description="Ticket açmak için Elytra kitini seçin",
-                emoji="🪶",
-                value="Elytra"
-            ),
-            discord.SelectOption(
-                label="Gapple",
-                description="Ticket açmak için Gapple kitini seçin",
-                emoji="🍎",
-                value="Gapple"
             ),
             discord.SelectOption(
                 label="Beast",
                 description="Ticket açmak için Beast kitini seçin",
-                emoji="🦁",
+                emoji="<:beast:1429546570117939250>",
                 value="Beast"
+            ),
+            discord.SelectOption(
+                label="Diapot",
+                description="Ticket açmak için Diapot kitini seçin",
+                emoji="<:diapot:1431384633345572966>",
+                value="Diapot"
+            ),
+            discord.SelectOption(
+                label="Crystal",
+                description="Ticket açmak için Crystal kitini seçin",
+                emoji="<:crystal:1429548979930009674>",
+                value="Crystal"
+            ),
+            discord.SelectOption(
+                label="Gapple",
+                description="Ticket açmak için Gapple kitini seçin",
+                emoji="<:gapple:1429545229547212830>",
+                value="Gapple"
+            ),
+            discord.SelectOption(
+                label="Smp",
+                description="Ticket açmak için Smp kitini seçin",
+                emoji="<:smp:1429561775388364921>",
+                value="Smp"
+            ),
+            discord.SelectOption(
+                label="Axe",
+                description="Ticket açmak için Axe kitini seçin",
+                emoji="<:axe:1429549142190981174>",
+                value="Axe"
+            ),
+            discord.SelectOption(
+                label="Uhc",
+                description="Ticket açmak için Uhc kitini seçin",
+                emoji="<:uhc:1429553332770574347>",
+                value="Uhc"
             )
         ]
         
@@ -751,7 +650,6 @@ class TicketSelectMenu(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         kit_name = self.values[0]
         
-        # Cooldown kontrolü
         if check_cooldown(interaction.user.id, kit_name):
             remaining = get_remaining_cooldown(interaction.user.id, kit_name)
             days = remaining // (24 * 60 * 60)
@@ -778,9 +676,9 @@ class TicketPanel(discord.ui.View):
 async def panel(interaction: discord.Interaction):
     embed = discord.Embed(
         title="TRTİERLİST",
-        description="**Test Olabileceğiniz Kitler:**\nNethpot, Diapot, Beast, Elytra, Gapple, \n\n"
-                   "- Eğer bir tierin yoksa veya tierin LT3ün altındaysa istediğin kiti seçerek o kitde ticket oluşturabilirsin.\n\n"
-                    "- Test süresi 5 gündür.",
+        description="**Test Olabileceğiniz Kitler:**\nNethpot, Beast, Diapot, Crystal, Gapple, Smp, Axe, Uhc\n\n"
+                   "- Eğer bir tierin yoksa veya tierin LT3'ün altındaysa istediğin kiti seçerek o kitte ticket oluşturabilirsin.\n\n"
+                   "- Test süresi 5 gündür.",
         color=discord.Color.dark_gold()
     )
     await interaction.response.send_message(embed=embed, view=TicketPanel())
@@ -797,15 +695,13 @@ async def panel_error(interaction, error):
 @client.tree.command(name="ticket_close", description="Aktif ticket kanalını kapatır.")
 @app_commands.describe(ticket="Kapatılacak ticket kanalı")
 async def ticket_close(interaction: discord.Interaction, ticket: discord.TextChannel):
-    # Kit-özel tester rollerini kontrol et (genel Tester rolü artık hiçbir işlem yapamaz)
-    kit_tester_roles = ["Nethpot Tester", "Diapot Tester", "Beast Tester", "Elytra Tester", "Gapple Tester"]
+    kit_tester_roles = [f"{kit} Tester" for kit in KITS]
     has_kit_tester_role = any(r.name in kit_tester_roles for r in interaction.user.roles)
-    
-    # Yönetici kontrolü de ekleyelim
     is_admin = interaction.user.guild_permissions.administrator
     
     if not has_kit_tester_role and not is_admin:
-        return await interaction.response.send_message("❌ Bu komutu kullanabilmek için kit-özel tester rollerinden birine sahip olmanız gerekir (Nethpot Tester, Diapot Tester, Beast Tester, Elytra Tester, Gapple Tester).", ephemeral=True)
+        return await interaction.response.send_message("❌ Bu komutu kullanabilmek için kit-özel tester rollerinden birine sahip olmanız gerekir.", ephemeral=True)
+    
     if not ticket.name.startswith("ticket-"):
         return await interaction.response.send_message("❌ Bu bir ticket kanalı değil.", ephemeral=True)
     
@@ -819,18 +715,9 @@ async def ticket_close(interaction: discord.Interaction, ticket: discord.TextCha
 
 # ——— BOTU BAŞLAT ———
 if __name__ == "__main__":
-    keep_alive()  # ← BU SATIRI EKLE
+    keep_alive()
     token = os.getenv("TOKEN")
     if not token:
-        print("❌ TOKEN bulunamadı!")
+        print("❌ TOKEN bulunamadı! Lütfen Replit Secrets'i kontrol edin.")
     else:
         client.run(token)
-```
-
-### 4️⃣ **requirements.txt'ye Flask Ekle**
-
-`requirements.txt` dosyasını aç, **flask** var mı kontrol et:
-```
-discord.py==2.3.2
-python-dotenv==1.0.0
-flask==3.0.0
