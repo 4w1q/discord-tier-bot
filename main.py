@@ -819,8 +819,18 @@ async def ticket_close(interaction: discord.Interaction, ticket: discord.TextCha
 
 # ——— BOTU BAŞLAT ———
 if __name__ == "__main__":
+    keep_alive()  # ← BU SATIRI EKLE
     token = os.getenv("TOKEN")
     if not token:
-        print("❌ TOKEN bulunamadı! Lütfen .env dosyasını veya Replit Secrets'i kontrol edin.")
+        print("❌ TOKEN bulunamadı!")
     else:
         client.run(token)
+```
+
+### 4️⃣ **requirements.txt'ye Flask Ekle**
+
+`requirements.txt` dosyasını aç, **flask** var mı kontrol et:
+```
+discord.py==2.3.2
+python-dotenv==1.0.0
+flask==3.0.0
