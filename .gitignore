@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Gizli dosyalar
+.env
+config.json
+*.log
+
+# JSON veritabanı dosyaları (opsiyonel - silmek istersen bu satırları kaldır)
+tierlist.json
+logs_channels.json
+cooldowns.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Replit
+.replit
+.upm
+replit.nix
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+---
+
+## 📄 `.env.example` dosyası:
+```
+# Discord Bot Token
+# Discord Developer Portal'dan botunu oluşturduktan sonra token'ı buraya yapıştır
+TOKEN=your_discord_bot_token_here
