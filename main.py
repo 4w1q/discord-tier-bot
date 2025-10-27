@@ -389,60 +389,73 @@ async def handle_tierver(
     sunucu: str,
     kazanan: discord.Member
 ):
+    # Önce yetkiyi kontrol et
     required_role = f"{kit} Tester"
     if not any(r.name == required_role for r in interaction.user.roles):
         return await interaction.response.send_message(
             f"❌ Bu komutu kullanabilmek için `{required_role}` rolüne sahip olmanız gerekir.", ephemeral=True
         )
 
-    yeni_tier_role = discord.utils.get(interaction.guild.roles, name=yeni_tier)
-    eski_tier_role = discord.utils.get(interaction.guild.roles, name=eski_tier)
-    
-    if not yeni_tier_role:
-        return await interaction.response.send_message(f"❌ `{yeni_tier}` rolü bulunamadı!", ephemeral=True)
+    # Hemen defer et - işlem uzun sürebilir
+    await interaction.response.defer(ephemeral=True)
 
-    data = load_data()
-    gid = str(interaction.guild_id)
-    tid = str(yeni_tier_role.id)
-    data.setdefault(gid, {}).setdefault(tid, [])
-    
-    if str(user.id) not in data[gid][tid]:
-        data[gid][tid].append(str(user.id))
-        save_data(data)
+    try:
+        yeni_tier_role = discord.utils.get(interaction.guild.roles, name=yeni_tier)
+        eski_tier_role = discord.utils.get(interaction.guild.roles, name=eski_tier)
+        
+        if not yeni_tier_role:
+            return await interaction.followup.send(f"❌ `{yeni_tier}` rolü bulunamadı!", ephemeral=True)
 
-    if eski_tier_role and eski_tier_role in user.roles:
-        await user.remove_roles(eski_tier_role)
-    if yeni_tier_role not in user.roles:
-        await user.add_roles(yeni_tier_role)
+        # Veriyi kaydet
+        data = load_data()
+        gid = str(interaction.guild_id)
+        tid = str(yeni_tier_role.id)
+        data.setdefault(gid, {}).setdefault(tid, [])
+        
+        if str(user.id) not in data[gid][tid]:
+            data[gid][tid].append(str(user.id))
+            save_data(data)
 
-    # Kanal ismi: 🏆・kit-sonuclar (örn: 🏆・nethpot-sonuclar)
-    channel_name = f"🏆・{kit.lower()}-sonuclar"
-    channel = discord.utils.get(interaction.guild.channels, name=channel_name)
-    
-    if not channel:
-        return await interaction.response.send_message(f"❌ `{channel_name}` kanalı bulunamadı!", ephemeral=True)
+        # Rolleri güncelle
+        if eski_tier_role and eski_tier_role in user.roles:
+            await user.remove_roles(eski_tier_role)
+        if yeni_tier_role not in user.roles:
+            await user.add_roles(yeni_tier_role)
 
-    embed = discord.Embed(title=f"🏆 {oyun_içi_isim} {kit} Test Sonuçları:", color=discord.Color.orange())
-    embed.add_field(name="Discord:", value=user.mention, inline=True)
-    embed.add_field(name="Tester:", value=tester.mention, inline=True)
-    embed.add_field(name="Oyun içi isim:", value=oyun_içi_isim, inline=False)
-    embed.add_field(name="Yeni Tier:", value=yeni_tier_role.mention, inline=True)
-    embed.add_field(name="Eski Tier:", value=eski_tier_role.mention if eski_tier_role else eski_tier, inline=True)
-    embed.add_field(name="Kazanan:", value=kazanan.mention, inline=True)
-    embed.add_field(name="Sonuçlar:", value=skor, inline=False)
-    embed.add_field(name="Sunucu:", value=sunucu, inline=False)
+        # Kanal ismi: 🏆・kit-sonuclar (örn: 🏆・nethpot-sonuclar)
+        channel_name = f"🏆・{kit.lower()}-sonuclar"
+        channel = discord.utils.get(interaction.guild.channels, name=channel_name)
+        
+        if not channel:
+            return await interaction.followup.send(f"❌ `{channel_name}` kanalı bulunamadı!", ephemeral=True)
 
-    await channel.send(embed=embed)
-    await interaction.response.send_message("✅ Kaydedildi, rol verildi ve rapor gönderildi.", ephemeral=True)
-    
-    log_embed = discord.Embed(title="🏆 Tier Verme", color=discord.Color.green(), timestamp=datetime.now())
-    log_embed.add_field(name="Yapan", value=interaction.user.mention, inline=True)
-    log_embed.add_field(name="Oyuncu", value=user.mention, inline=True)
-    log_embed.add_field(name="Kit", value=kit, inline=True)
-    log_embed.add_field(name="Yeni Tier", value=yeni_tier, inline=True)
-    log_embed.add_field(name="Kazanan", value=kazanan.mention, inline=True)
-    log_embed.add_field(name="Skor", value=skor, inline=True)
-    await send_log(interaction.guild_id, log_embed)
+        # Embed oluştur ve gönder
+        embed = discord.Embed(title=f"🏆 {oyun_içi_isim} {kit} Test Sonuçları:", color=discord.Color.orange())
+        embed.add_field(name="Discord:", value=user.mention, inline=True)
+        embed.add_field(name="Tester:", value=tester.mention, inline=True)
+        embed.add_field(name="Oyun içi isim:", value=oyun_içi_isim, inline=False)
+        embed.add_field(name="Yeni Tier:", value=yeni_tier_role.mention, inline=True)
+        embed.add_field(name="Eski Tier:", value=eski_tier_role.mention if eski_tier_role else eski_tier, inline=True)
+        embed.add_field(name="Kazanan:", value=kazanan.mention, inline=True)
+        embed.add_field(name="Sonuçlar:", value=skor, inline=False)
+        embed.add_field(name="Sunucu:", value=sunucu, inline=False)
+
+        await channel.send(embed=embed)
+        await interaction.followup.send("✅ Kaydedildi, rol verildi ve rapor gönderildi.", ephemeral=True)
+        
+        # Log gönder
+        log_embed = discord.Embed(title="🏆 Tier Verme", color=discord.Color.green(), timestamp=datetime.now())
+        log_embed.add_field(name="Yapan", value=interaction.user.mention, inline=True)
+        log_embed.add_field(name="Oyuncu", value=user.mention, inline=True)
+        log_embed.add_field(name="Kit", value=kit, inline=True)
+        log_embed.add_field(name="Yeni Tier", value=yeni_tier, inline=True)
+        log_embed.add_field(name="Kazanan", value=kazanan.mention, inline=True)
+        log_embed.add_field(name="Skor", value=skor, inline=True)
+        await send_log(interaction.guild_id, log_embed)
+        
+    except Exception as e:
+        await interaction.followup.send(f"❌ Bir hata oluştu: {str(e)}", ephemeral=True)
+        print(f"Tier verme hatası: {e}")
 
 # ——————— TierVer Komutları (Her Kit İçin) ———————
 
