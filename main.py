@@ -375,7 +375,7 @@ async def tier_show(interaction: discord.Interaction):
     
     await send_log(interaction.guild_id, log_embed)
 
-# ——————— TierVer Fonksiyonu ———————
+# ——————— TierVer Fonksiyonu (DÜZELTİLDİ) ———————
 
 async def handle_tierver(
     interaction: discord.Interaction,
@@ -428,6 +428,7 @@ async def handle_tierver(
     embed.add_field(name="Oyun içi isim:", value=oyun_içi_isim, inline=False)
     embed.add_field(name="Yeni Tier:", value=yeni_tier_role.mention, inline=True)
     embed.add_field(name="Eski Tier:", value=eski_tier_role.mention if eski_tier_role else eski_tier, inline=True)
+    embed.add_field(name="Kazanan:", value=kazanan.mention, inline=True)
     embed.add_field(name="Sonuçlar:", value=skor, inline=False)
     embed.add_field(name="Sunucu:", value=sunucu, inline=False)
 
@@ -439,6 +440,7 @@ async def handle_tierver(
     log_embed.add_field(name="Oyuncu", value=user.mention, inline=True)
     log_embed.add_field(name="Kit", value=kit, inline=True)
     log_embed.add_field(name="Yeni Tier", value=yeni_tier, inline=True)
+    log_embed.add_field(name="Kazanan", value=kazanan.mention, inline=True)
     log_embed.add_field(name="Skor", value=skor, inline=True)
     await send_log(interaction.guild_id, log_embed)
 
